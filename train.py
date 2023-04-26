@@ -5,6 +5,8 @@ from torchvision import datasets, transforms
 import random
 import numpy as np
 import time
+import argparse
+import logging
 
 import vgg
 import transformer
@@ -12,10 +14,10 @@ import utils
 
 # GLOBAL SETTINGS
 TRAIN_IMAGE_SIZE = 256
-DATASET_PATH = "dataset"
+# DATASET_PATH = "dataset"
 NUM_EPOCHS = 1
-STYLE_IMAGE_PATH = "images/mosaic.jpg"
-BATCH_SIZE = 4 
+# STYLE_IMAGE_PATH = "images/mosaic.jpg"
+BATCH_SIZE = 4
 CONTENT_WEIGHT = 17 # 17
 STYLE_WEIGHT = 50 # 25
 ADAM_LR = 0.001
@@ -25,6 +27,11 @@ SAVE_MODEL_EVERY = 500 # 2,000 Images with batch size 4
 SEED = 35
 PLOT_LOSS = 1
 
+DATASET_PATH="datasets/coco_2014"
+STYLE_IMAGE_PATH="style/style.jpg"
+DEVICE = None
+
+
 def train():
     # Seeds
     torch.manual_seed(SEED)
@@ -33,7 +40,14 @@ def train():
     random.seed(SEED)
 
     # Device
-    device = ("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+
+    device = DEVICE or device
 
     # Dataset and Dataloader
     transform = transforms.Compose([
@@ -165,4 +179,150 @@ def train():
     if (PLOT_LOSS):
         utils.plot_loss_hist(content_loss_history, style_loss_history, total_loss_history)
 
-train()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-d', '--debug',
+        help="Print lots of debugging statements",
+        action="store_const", dest="loglevel", const=logging.DEBUG,
+        default=logging.WARNING,
+    )
+    parser.add_argument(
+        '-v', '--verbose',
+        help="Be verbose",
+        action="store_const", dest="loglevel", const=logging.INFO
+    )
+    parser.add_argument(
+        "-tis",
+        "--train-image-size",
+        help="Train image size.",
+        dest="TRAIN_IMAGE_SIZE",
+        type=int,
+        default=256
+    )
+    parser.add_argument(
+        "-ne",
+        "--num-epochs",
+        help="Number of epochs.",
+        dest="NUM_EPOCHS",
+        type=int,
+        default=1
+    )
+    parser.add_argument(
+        "-bs",
+        "--batch-size",
+        help="Batch size.",
+        dest="BATCH_SIZE",
+        type=int,
+        default=4
+    )
+    parser.add_argument(
+        "-cw",
+        "--content-weight",
+        help="Content weight.",
+        dest="CONTENT_WEIGHT",
+        type=int,
+        default=8
+    )
+    parser.add_argument(
+        "-sw",
+        "--style-weight",
+        help="Style weight.",
+        dest="STYLE_WEIGHT",
+        type=int,
+        default=50
+    )
+    parser.add_argument(
+        "-alr",
+        "--adam-lr",
+        help="Adam LR.",
+        dest="ADAM_LR",
+        type=float,
+        default=0.001
+    )
+    parser.add_argument(
+        "-mo",
+        "--save-model-path",
+        help="Save model path.",
+        dest="SAVE_MODEL_PATH",
+        type=str,
+        default="models/"
+    )
+    parser.add_argument(
+        "-io",
+        "--save-image-path",
+        help="Save image path.",
+        dest="SAVE_IMAGE_PATH",
+        type=str,
+        default="images/out/"
+    )
+    parser.add_argument(
+        "-sme",
+        "--save-model-every",
+        help="Save model every so many images.",
+        dest="SAVE_MODEL_EVERY",
+        type=int,
+        default=500
+    )
+    parser.add_argument(
+        "-s",
+        "--seed",
+        help="Seed.",
+        dest="SEED",
+        type=int,
+        default=35
+    )
+    parser.add_argument(
+        "-pl",
+        "--plot-loss",
+        help="Plot loss.",
+        dest="PLOT_LOSS",
+        type=int,
+        default=1
+    )
+    parser.add_argument(
+        "-dp",
+        "--dataset-path",
+        help="Dataset path.",
+        dest="DATASET_PATH",
+        type=str,
+        default="datasets/coco_2014"
+    )
+    parser.add_argument(
+        "-de",
+        "--device",
+        help="Force device use.",
+        dest="DEVICE",
+        type=str,
+        default=""
+    )
+    parser.add_argument(
+        "-st",
+        "--style-image-path",
+        help="Style image path.",
+        dest="STYLE_IMAGE_PATH",
+        type=str,
+        required=True
+    )
+
+    args = parser.parse_args()
+
+    TRAIN_IMAGE_SIZE = args.TRAIN_IMAGE_SIZE
+    NUM_EPOCHS = args.NUM_EPOCHS
+    BATCH_SIZE = args.BATCH_SIZE
+    CONTENT_WEIGHT = args.CONTENT_WEIGHT
+    STYLE_WEIGHT = args.STYLE_WEIGHT
+    ADAM_LR = args.ADAM_LR
+    SAVE_MODEL_PATH = args.SAVE_MODEL_PATH
+    SAVE_IMAGE_PATH = args.SAVE_IMAGE_PATH
+    SAVE_MODEL_EVERY = args.SAVE_MODEL_EVERY
+    SEED = args.SEED
+    PLOT_LOSS = args.PLOT_LOSS
+    DATASET_PATH = args.DATASET_PATH
+    STYLE_IMAGE_PATH = args.STYLE_IMAGE_PATH
+    DEVICE = args.DEVICE
+
+    logging.basicConfig(level=args.loglevel)
+
+    train()
